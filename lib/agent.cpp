@@ -1,53 +1,60 @@
 #include "agent.h"
 
 Agent::Agent(){
-    BZERO(name, MAXNAME);
-    BZERO(dev, MAXDEV);
     BZERO(mac, ETH_ALEN);
-    BZERO(mac_str, MAXMACSTR);
-    BZERO(ip_str, MAXIPSTR);
     BZERO(ip, 4);
 }
 
-Agent::Agent(char *name): Agent(){
-    strncpy(this->name, name, MAXNAME);
+Agent::Agent(std::string name): Agent(){
+    if(name.length() > MAXNAME){
+        std::cerr << "[X]Error: agent name too long" << std::endl;
+        exit(-1);
+    }
+    this->name = name;
 }
 
-Agent::Agent(char *_name, char *_dev) : Agent(_name){
-    if(strlen(_dev) > MAXDEV){
+Agent::Agent(std::string name, std::string dev) : Agent(name){
+    if(dev.length() > MAXDEV){
         std::cerr << "[X]Error: device name too long" << std::endl;
         exit(-1);
     }
 
-    strcpy(name, _name);
-    strcpy(dev, _dev);
+    this->dev = dev;
     get_dev_info(dev, mac, ip);
-    parse_mac(mac, mac_str);
-    inet_ntop(AF_INET, ip, ip_str, sizeof(ip_str));
+    parse_mac(mac, &mac_str);
+    inet_ntop(AF_INET, ip, const_cast<char*>(ip_str.c_str()), sizeof(ip_str));
 }
 
 Agent::Agent(const Agent &p){
-    memcpy(this->name, p.name, MAXNAME+1);
-    memcpy(this->dev, p.dev, MAXDEV+1);
+    this->name = p.name;
+    this->dev = p.dev;
     memcpy(this->mac, p.mac, ETH_ALEN+1);
-    memcpy(this->mac_str, p.mac_str, MAXMACSTR+1);
+    this->mac_str = p.mac_str;
     memcpy(this->ip, p.ip, 4+1);
-    memcpy(this->ip_str, p.ip_str, MAXIPSTR+1);
+    this->ip_str = p.ip_str;
 }
 
 void Agent::set_mac(pktbyte_n *_mac){
     memcpy(mac, _mac, ETH_ALEN);
-    parse_mac(mac, mac_str);
+    parse_mac(mac, &mac_str);
 }
 
-void Agent::set_ip_str(char *_ip_str){
-    if(strlen(ip_str) > MAXIPSTR){
+void Agent::set_mac_str(std::string mac_str){
+    this->mac_str = mac_str;
+
+    for(int i=0; i < ETH_ALEN; i++){
+        this->mac[i] = static_cast<char>(strtol(mac_str.substr(i*3,2).c_str(), NULL, 16));
+    }
+}
+
+void Agent::set_ip_str(std::string ip_str){
+    if(ip_str.length() > MAXIPSTR){
         std::cerr << "[X]Error: Length of IP is too long" << std::endl;
         exit(-1);
     }
 
-    strcpy(ip_str, _ip_str);
-    inet_pton(AF_INET, _ip_str, ip);
+    this->ip_str = ip_str;
+    inet_pton(AF_INET, ip_str.c_str(), ip);
 }
 
 void Agent::show_info(){
@@ -58,9 +65,9 @@ void Agent::show_info(){
 }
 
 int Agent::send(Xpkt *pkt){
-    char *dev = this->get_dev();
+    std::string dev = this->get_dev();
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+    pcap_t* handle = pcap_open_live(dev.c_str(), BUFSIZ, 1, 1000, errbuf);
     int res;
 
     if (handle == NULL) {
@@ -75,6 +82,20 @@ int Agent::send(Xpkt *pkt){
 
     pcap_close(handle);
     return 0;
+}
+
+int Agent::set_pcap_filter(pcap_t *handle, char *filter, bpf_u_int32 net){
+    struct bpf_program fp;
+    
+    if(pcap_compile(handle, &fp, filter, 0, net) == -1) {
+        fprintf(stderr, "[-] Can't parse filter \'%s\'\n==> %s\n", filter, pcap_geterr(handle));
+        return -1;
+    }
+
+    if(pcap_setfilter(handle, &fp) == -1) {
+        fprintf(stderr, "[-] Can't install filter \'%s\'\n==>%s\n", filter, pcap_geterr(handle));
+        return -1;
+    }
 }
 
 /* [TODO]
@@ -117,32 +138,34 @@ int Agent::dump(char *dev, Xpkt *pkt, bool (*callback)(pktbyte *pkt)){
             필터링된 패킷들을 벡터로 전부 반환하게 하면 전반듯인
             안정성이 개선될듯
 */
-void Agent::snatch(Xpkt *xpkt, bool (*filter)(pktbyte_n *pkt)){
+void Agent::snatch(std::vector<Xpkt> *caught, const char *pcap_filter, int cnt){
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+    pcap_t* handle = pcap_open_live(dev.c_str(), BUFSIZ, 1, 1000, errbuf);
 
-    if (handle == NULL) {
+    if(handle == NULL) {
         std::cerr << "couldn't open device "<< dev << ":" << errbuf << std::endl;
         exit(-1);
     }
 
-    if (filter == nullptr){
-        std::cerr << "filter function is required" <<std::endl;
+    if(pcap_filter == nullptr){
+        std::cerr << "pcap filter is required" <<std::endl;
         exit(-1);
     }
 
-    while(true){
+    set_pcap_filter(handle, const_cast<char*>(pcap_filter), *(reinterpret_cast<bpf_u_int32*>(this->ip)));
+
+    for(int i=0; i<100; i++){
         struct pcap_pkthdr *header;
         const pktbyte_n *packet;
         int res = pcap_next_ex(handle, &header, &packet);
 
+        if(caught->size() == cnt)
+            break;
+
         if(res == 0) continue;
         if(res == -1 || res == -2) break;
 
-        if(filter(const_cast<pktbyte_n *>(packet))){
-            xpkt->set_pktbuf(const_cast<pktbyte_n *>(packet), header->len);
-            break;
-        }
+        caught->push_back(Xpkt(const_cast<pktbyte_n *>(packet), header->len));
     }
 
     pcap_close(handle);
@@ -158,7 +181,7 @@ void Agent::snatch(Xpkt *xpkt, bool (*filter)(pktbyte_n *pkt)){
         Broadcast normal ARP request
 */
 void Agent::arp_send_req(Agent *target){
-    char *dev = this->get_dev();
+    std::string dev = this->get_dev();
     pktbyte_n *src_mac = this->get_mac();
     pktbyte_n *src_ip = this->get_ip();
     pktbyte_n *target_ip = target->get_ip();
@@ -231,22 +254,31 @@ int Agent::arp_send_raw(
         -   ARP request가 항상 성공하는 것이 아니므로 이에 관한 처리가 필요함
 */
 int Agent::arp_get_target_mac(Agent *target){
-    Xpkt xpkt = Xpkt();
-    char *target_dev = target->get_dev();
-    char *target_ip_str = target->get_ip_str();
-    char *target_mac_str = nullptr;
+    std::vector<Xpkt> caught;
+    std::string target_dev = target->get_dev();
+    std::string target_ip_str = target->get_ip_str();
+    std::string target_mac_str;
+    std::string pcap_filter = "arp";
+    pcap_filter += " and src host " + target_ip_str;
+    pcap_filter += " and (arp[6:2] = 2)";
 
-    std::thread snatcher(&Agent::snatch, this, &xpkt, filter_arp_reply);
+    std::thread snatcher(&Agent::snatch, this, &caught, pcap_filter.c_str(), 1);
 
     usleep(300); // Wait little for snatcher to be ready
 
     std::cout << "[ARP / Get mac address]" << std::endl;
     std::cout << "Target IP: " << target_ip_str << std::endl;
 
-    Agent::arp_send_req(target);
+    for(int i=0; i<3; i++)
+        Agent::arp_send_req(target);
     snatcher.join();
 
-    Arp arp = Arp(xpkt);
+    if(caught.size() == 0){
+        std::cerr << "[!] " << target->get_name() << "(" <<target_ip_str << ") doesn't reply to our request" << std::endl;
+        exit(-1);
+    }
+
+    Arp arp = Arp(caught[0]);
     target->set_mac(arp.get_sha());
 
     target_mac_str = target->get_mac_str();
@@ -276,27 +308,3 @@ int Agent::arp_get_target_mac(Agent *target){
     Note:
         Error handling
 */
-int Agent::arp_spoof(Agent *sender, Agent *target){
-    pktbyte_n *sender_mac = sender->get_mac();
-    char *sender_mac_str = sender->get_mac_str();
-    char *target_ip_str = target->get_ip_str();
-    char *attker_mac_str = this->get_mac_str();
-
-    Agent::arp_get_target_mac(sender);
-
-    std::cout <<"[ARP / ARP spoof]" << std::endl;
-    std::cout << "Sender MAC: " << sender_mac_str << std::endl;
-    std::cout << "Target IP: " << target_ip_str << std::endl;
-    std::cout << "Your MAC: " << attker_mac_str << std::endl;
-    std::cout << std::endl;
-
-    Agent::arp_send_raw(
-        ARPOP_REPLY,            // op
-        this->get_mac(),       // sha
-        target->get_ip(),       // sip
-        sender->get_mac(),      // tha
-        sender->get_ip()        // tip
-    );
-
-    return true;
-}

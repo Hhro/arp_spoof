@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <string>
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
@@ -13,8 +14,8 @@
 
 #define BZERO(buf,size) memset(buf, 0, size)
 
-void get_dev_info(char *dev, pktbyte_n *mac, pktbyte_n *ip);
-void print_mac(pktbyte_n *mac, const char *prefix);
-void parse_mac(pktbyte_n *mac, char* mac_str);
-void print_ip(pktbyte_n *ip, const char *prefix);
+void get_dev_info(std::string dev, pktbyte_n *mac, pktbyte_n *ip);
+void print_mac(pktbyte_n *mac, std::string prefix);
+void parse_mac(pktbyte_n *mac, std::string *mac_str);
+void print_ip(pktbyte_n *ip, std::string prefix);
 void parse_ip(pktbyte_n *ip, char* ip_str);

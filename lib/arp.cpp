@@ -31,8 +31,16 @@ pktbyte_n* Arp::get_sha(){
     return ar_sha;
 }
 
+pktbyte_n* Arp::get_sip(){
+    return ar_sip;
+}
+
 pktbyte_n* Arp::get_tha(){
     return ar_tha;
+}
+
+pktbyte_n* Arp::get_tip(){
+    return ar_tip;
 }
 
 void Arp::assemble(){
@@ -49,6 +57,7 @@ void Arp::assemble(){
 
 void Arp::dissect(){
     arphdr *arp = ARP(pktbuf); 
+
     ar_hrd = arp->ar_hrd;
     ar_pro = arp->ar_pro;
     ar_hln = arp->ar_hln;
@@ -58,5 +67,5 @@ void Arp::dissect(){
     memcpy(ar_sha, arp->ar_sha, ETH_ALEN);
     memcpy(ar_sip, arp->ar_sip, 4);
     memcpy(ar_tha, arp->ar_tha, ETH_ALEN);
-    memcpy(ar_sip, arp->ar_sip, 4);
+    memcpy(ar_tip, arp->ar_tip, 4);
 }

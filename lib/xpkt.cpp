@@ -9,7 +9,7 @@ Xpkt::Xpkt(){
 }
 
 Xpkt::Xpkt(const Xpkt& xpkt) : Xpkt(){
-    Xpkt::set_pktbuf(xpkt.pktbuf, xpkt.len);
+    this->set_pktbuf(xpkt.pktbuf, xpkt.len);
 }
 
 Xpkt::Xpkt(pktbyte_n *_pktbuf, int _len) : Xpkt(){
@@ -91,6 +91,7 @@ void Xpkt::hexdump(int max_len){
         if(i % 0x10 == 0)
             std::cout<<std::endl;
     }
+    std::cout<<std::endl<<std::endl;
 }
 
 Xpkt Xpkt::operator / (Xpkt &p){

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdio>
 #include <cstring>
 #include <cstdint>
 #include <pcap.h>
@@ -60,7 +61,9 @@ class Arp : public Xpkt{
         pktword_n get_pro();
         pktword_n get_op();
         pktbyte_n* get_sha();
+        pktbyte_n* get_sip();
         pktbyte_n* get_tha();
+        pktbyte_n* get_tip();
         void assemble();
         void dissect();
 };

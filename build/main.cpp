@@ -19,21 +19,21 @@ int main(int argc, char *argv[]){
         exit(-1);
     }
 
-    char *interface = argv[1];
-    char sender_name[MAXNAME+1];
-    char target_name[MAXNAME+1];
+    std::string interface = argv[1];
+    std::string sender_name;
+    std::string target_name;
+    std::string sender_ip;
+    std::string target_ip;
     int num_sessions = (argc-2) / 2;
-    ArpSpoofer attacker = ArpSpoofer("hhro", interface);
-    Xpkt xpkt = Xpkt();                     // general packet object
+    ArpSpoofer attacker = {"hhro", interface};
 
     for(int i = 1; i <= num_sessions ; i++){
-        BZERO(sender_name, MAXNAME+1);
-        BZERO(target_name, MAXNAME+1);
+        sender_name = "sender" + std::to_string(i);
+        target_name = "target" + std::to_string(i);
+        sender_ip = argv[2*i];
+        target_ip = argv[2*i+1];
 
-        snprintf(sender_name, MAXNAME, "sender%d", i);
-        snprintf(target_name, MAXNAME, "target%d", i);
-
-        attacker.create_session(sender_name, argv[2*i], target_name, argv[2*i+1]);
+        attacker.create_session(sender_name, sender_ip, target_name, target_ip);
     }
 
     attacker.acquire_sessions_hwaddr();
@@ -45,12 +45,8 @@ int main(int argc, char *argv[]){
     attacker.print_sessions();
     std::cout << std::endl;
 
-    /*
-    std::cout << "[Result]" << std::endl;
-    // Do ARP spoof
-    if(attacker.arp_spoof(&sender, &target)){
+    if(attacker.arp_spoof()){
         std::cout << "Spoofing success" << std::endl;
     }
     std::cout << std::endl;
-    */
 }
