@@ -58,11 +58,14 @@ void print_ip(pktbyte_n *ip, std::string prefix){
     std::cout << prefix << "IP: " << ip_str;
 }
 
-void parse_ip(pktbyte_n *ip, char *ip_str){
-    const char *res = inet_ntop(AF_INET, ip, ip_str, sizeof(ip_str));
+void parse_ip(pktbyte_n *ip, std::string *ip_str){
+    char ip_str_ch[20];
+    const char *res = inet_ntop(AF_INET, ip, ip_str_ch, sizeof(ip_str_ch));
 
     if(res == NULL){
         std::cerr << "IP is invalid" << std::endl;
         exit(-1);
     }
+
+    *ip_str = std::string(ip_str_ch);
 }

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <thread>
 #include <pcap.h>
+#include "ip.h"
 #include "arp.h"
 #include "ether.h"
 #include "utils.h"
@@ -46,6 +47,9 @@ class Agent{
         void set_ip_str(std::string _ip_str);
 
         void show_info();
+
+        bool from_agent(Ip *ip);
+        bool to_agent(Ip *ip);
 
         int send(Xpkt *pkt);
         int set_pcap_filter(pcap_t *handle, char *filter, bpf_u_int32 net);

@@ -27,6 +27,9 @@ int main(int argc, char *argv[]){
     int num_sessions = (argc-2) / 2;
     ArpSpoofer attacker = {"hhro", interface};
 
+    std::cout << "[Interface] "
+              << "Adapter: " << interface << std::endl;
+
     for(int i = 1; i <= num_sessions ; i++){
         sender_name = "sender" + std::to_string(i);
         target_name = "target" + std::to_string(i);
@@ -38,12 +41,7 @@ int main(int argc, char *argv[]){
 
     attacker.acquire_sessions_hwaddr();
 
-    std::cout << "[Interface]" << std::endl;
-    std::cout << "Interface: " << interface << std::endl;
-
-    std::cout << "[Sessions]" << std::endl;
     attacker.print_sessions();
-    std::cout << std::endl;
 
     if(attacker.arp_spoof()){
         std::cout << "Spoofing success" << std::endl;

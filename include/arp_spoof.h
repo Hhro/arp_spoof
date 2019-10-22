@@ -8,6 +8,7 @@
 #include <pcap.h>
 #include "agent.h"
 #include "arp.h"
+#include "ip.h"
 
 class ArpSpoofSession {
     private:
@@ -42,7 +43,8 @@ class ArpSpoofer: public Agent{
         void acquire_sessions_hwaddr();
         bool send_arp(Agent *sender, Agent *target);
         void corrupt();
+        bool is_recovery_detected(Arp *arp, ArpSpoofSession *sess);
+        void disrupt(ArpSpoofSession *sess);
         void relay();
         bool arp_spoof();
-        ~ArpSpoofer() {}
 };

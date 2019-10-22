@@ -22,7 +22,7 @@ Agent::Agent(std::string name, std::string dev) : Agent(name){
     this->dev = dev;
     get_dev_info(dev, mac, ip);
     parse_mac(mac, &mac_str);
-    inet_ntop(AF_INET, ip, const_cast<char*>(ip_str.c_str()), sizeof(ip_str));
+    parse_ip(ip, &ip_str);
 }
 
 Agent::Agent(const Agent &p){
@@ -58,10 +58,24 @@ void Agent::set_ip_str(std::string ip_str){
 }
 
 void Agent::show_info(){
-    std::cout << "Agent name: " << this->get_name() << std::endl;
-    std::cout << "Agent MAC: " << this->get_mac_str() << std::endl;
-    std::cout << "Agent IP: " << this->get_ip_str() << std::endl;
-    std::cout << std::endl;
+    std::cout << "Agent name: " << this->get_name()
+              << ", Agent MAC: " << this->get_mac_str()
+              << ", Agent IP: " << this->get_ip_str()
+              << std::endl;
+}
+
+bool Agent::from_agent(Ip *ip_pkt){
+    pktbyte_n *saddr = ip_pkt->get_saddr();
+    pktbyte_n *agent_ip = this->get_ip();
+
+    return (IS_SAME_IP(saddr, agent_ip));
+}
+
+bool Agent::to_agent(Ip *ip_pkt){
+    pktbyte_n *daddr = ip_pkt->get_daddr();
+    pktbyte_n *agent_ip = this->get_ip();
+
+    return (IS_SAME_IP(daddr, agent_ip));
 }
 
 int Agent::send(Xpkt *pkt){
@@ -266,8 +280,8 @@ int Agent::arp_get_target_mac(Agent *target){
 
     usleep(300); // Wait little for snatcher to be ready
 
-    std::cout << "[ARP / Get mac address]" << std::endl;
-    std::cout << "Target IP: " << target_ip_str << std::endl;
+    std::cout << "[ARP::Get mac address] "
+              << "Target IP: " << target_ip_str;
 
     for(int i=0; i<3; i++)
         Agent::arp_send_req(target);
@@ -285,13 +299,8 @@ int Agent::arp_get_target_mac(Agent *target){
 
     std::ios_base::fmtflags f( std::cout.flags() );
 
-    std::cout << "Result: " << std::endl;
-    std::cout.setf(std::ios_base::left);
-    std::cout << std::setw(MAXIPSTR+3) << "IP" << std::setw(MAXMACSTR) << "MAC" << std::endl;
-    std::cout << std::setw(MAXIPSTR+3) << target_ip_str << std::setw(MAXMACSTR) << target_mac_str << std::endl;
-    std::cout << std::endl;
-
-    std::cout.flags(f);
+    std::cout << " / Target Mac: " << target_mac_str 
+              << std::endl;
 
     return true;
 }

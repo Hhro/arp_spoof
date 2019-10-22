@@ -27,6 +27,9 @@ typedef uint8_t pktbyte_h;
 typedef uint16_t pktword;
 typedef uint16_t pktword_n;
 typedef uint16_t pktword_h;
+typedef uint32_t pktdword;
+typedef uint32_t pktdword_n;
+typedef uint32_t pktdword_h;
 
 class Xpkt{
     private:
@@ -40,14 +43,14 @@ class Xpkt{
     public:
         Xpkt();
         Xpkt(const Xpkt& xpkt);
-        Xpkt(pktbyte_h *_pktbuf, int len);
-        ~Xpkt();
-        pktbyte_h *get_pktbuf();
+        Xpkt(pktbyte_n *_pktbuf, int len);
+        pktbyte_n *get_pktbuf();
         int get_len();
         int get_capacity();
-        void set_pktbuf(pktbyte_h *data, int size);
+        void set_pktbuf(pktbyte_n *data, int size);
         void expand(int more);
-        void append(pktbyte_h *data, int size);
+        void append(pktbyte_n *data, int size);
         void hexdump(int max_len);
         Xpkt operator / (Xpkt &p);
+        ~Xpkt() { free(pktbuf); }
 };

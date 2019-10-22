@@ -16,10 +16,6 @@ Xpkt::Xpkt(pktbyte_n *_pktbuf, int _len) : Xpkt(){
     Xpkt::set_pktbuf(_pktbuf, _len);
 }
 
-Xpkt::~Xpkt(){
-    free(pktbuf);
-}
-
 pktbyte_n* Xpkt::get_pktbuf(){
     return pktbuf;
 }
